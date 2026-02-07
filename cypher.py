@@ -19,6 +19,9 @@ def cypher(split_container:List[str], message: List[int], end_marker: str = None
     for i, sentence in enumerate(split_container):
         if sentence == end_marker:
             if i + 2 < len(split_container):
+                # поскольку маркер конца - тройной пробел, то необходимо добавить между
+                # последней шифрующей последовательностью пробелов и маркером конца ввода еще одно предложение
+                # (иначе они сольются)
                 result.append(split_container[i + 1])
                 result.append(end_marker)
                 result.extend(split_container[i + 2])
@@ -32,7 +35,7 @@ def cypher(split_container:List[str], message: List[int], end_marker: str = None
             if bit not in cypher_map.keys():
                 raise ValueError(f"Некорректный бит: {bit}")
 
-            result.append(cypher_map[bit])
+            result.append(cypher_map[bit]) # один или два пробела
         else:
             # если биты закончились — обычный одиночный пробел
             result.append(" ")
@@ -52,11 +55,11 @@ def decypher(spaces: List[str], end_marker:str = None, decypher_map:Dict[str, in
 
     message: List[int] = []
     for space in spaces:
-        if space == end_marker:
+        if space == end_marker:  # прекращаем обработку, если встретили маркер конца
             break
 
-        if space not in decypher_map.keys():
-            break
+        if space not in decypher_map.keys():  # прекращаем обработку, если встретили неизвестный символ
+            raise ValueError(f"Некорректный символ: {space}")
 
         message.append(decypher_map[space])
 
