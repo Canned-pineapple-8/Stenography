@@ -24,7 +24,7 @@ def trim_spaces(text: str, markers: Tuple[str, ...] = end_of_sentence_symbols) -
 
             i += 1
             # пропускаем все пробелы после конца предложения
-            while i < len(text) and text[i].isspace():
+            while i < len(text) and text[i] == ' ':
                 i += 1
             continue
 
@@ -49,7 +49,7 @@ def extract_spaces(text: str, markers: Tuple[str, ...] = end_of_sentence_symbols
             i += 1
             buf = []
 
-            while i < len(text) and text[i].isspace():
+            while i < len(text) and text[i] == ' ':
                 buf.append(text[i])
                 i += 1
 
@@ -99,6 +99,7 @@ def bits_to_text(bits: List[int], encoding: str = "utf-8") -> str:
     )
 
     return data.decode(encoding)
+
 
 class LengthCheckResult(NamedTuple):
     container_capacity: int
