@@ -1,67 +1,63 @@
 # cypher.py
 from typing import List, Dict
-from constants import cypher_map_const, decypher_map_const, end_marker_const
+from constants import cypher_maps, decypher_maps, end_of_line_symbol, Mode
 
 
-def cypher(split_container:List[str], message: List[int], end_marker: str = None,
-           cypher_map:Dict[int, str] = None) -> List[str]:
+def cypher(split_container:List[str], message: List[int], number_of_bits: int = 1,
+           eol_symbol:str = None, mode:Mode = Mode.REGULAR_SPACES) -> List[str]:
     """
     Шифрует текст посредством вставки одиночных/двойных пробелов
     """
-    if cypher_map is None:
-        cypher_map = cypher_map_const
+    if mode is Mode.REGULAR_SPACES and number_of_bits > 1:
+        raise ValueError("Метод обыкновенных пробелов поддерживает только один шифруемый символ на предложение.")
 
-    if end_marker is None:
-        end_marker = end_marker_const
+    cypher_map = cypher_maps[mode]
+
+    if eol_symbol is None:
+        eol_symbol = end_of_line_symbol
 
     result: List[str] = []
 
-    for i, sentence in enumerate(split_container):
-        if sentence == end_marker:
-            if i + 2 < len(split_container):
-                # поскольку маркер конца - тройной пробел, то необходимо добавить между
-                # последней шифрующей последовательностью пробелов и маркером конца ввода еще одно предложение
-                # (иначе они сольются)
-                result.append(split_container[i + 1])
-                result.append(end_marker)
-                result.extend(split_container[i + 2])
-            else:
-                raise ValueError("Текущее сообщение не поместится в контейнер.")
+    i, j = 0, 0
+    while i < len(split_container):
+        sentence = split_container[i]
 
+        for _ in range(number_of_bits):
+            if j < len(message):
+                bit = message[j]
+                if bit not in cypher_map.keys():
+                    raise ValueError(f"Некорректный бит: {bit}")
+
+                sentence += cypher_map[bit]  # шифрующий символ
+                j += 1
+
+        sentence += eol_symbol
         result.append(sentence)
+        i += 1
 
-        if i < len(message):
-            bit = message[i]
-            if bit not in cypher_map.keys():
-                raise ValueError(f"Некорректный бит: {bit}")
-
-            result.append(cypher_map[bit]) # один или два пробела
-        else:
-            # если биты закончились — обычный одиночный пробел
-            result.append(" ")
 
     return result
 
 
-def decypher(spaces: List[str], end_marker:str = None, decypher_map:Dict[str, int] = None) -> List[int]:
+def decypher(spaces: List[str], number_of_bits: int = 1, mode:Mode = Mode.REGULAR_SPACES) -> List[int]:
     """
     Извлекает биты сообщения по количеству пробелов
     """
-    if decypher_map is None:
-        decypher_map = decypher_map_const
+    if mode is Mode.REGULAR_SPACES and number_of_bits > 1:
+        raise ValueError("Метод обыкновенных пробелов поддерживает только один шифруемый символ на предложение.")
 
-    if end_marker is None:
-        end_marker = end_marker_const
+    decypher_map = decypher_maps[mode]
 
     message: List[int] = []
-    for space in spaces:
-        if space == end_marker:  # прекращаем обработку, если встретили маркер конца
-            break
-
-        if space not in decypher_map.keys():  # прекращаем обработку, если встретили неизвестный символ
-            raise ValueError(f"Некорректный символ: {space}")
-
-        message.append(decypher_map[space])
+    for space_sequence in spaces:
+        if mode is Mode.REGULAR_SPACES:
+            if space_sequence not in decypher_map.keys():  # прекращаем обработку, если встретили неизвестный символ
+                raise ValueError(f"Некорректный символ: {space_sequence}")
+            message.append(decypher_map[space_sequence])
+        elif mode is Mode.NON_BREAKING_SPACES:
+            for space in space_sequence:
+                if space not in decypher_map.keys():  # прекращаем обработку, если встретили неизвестный символ
+                    raise ValueError(f"Некорректный символ: {space}")
+                message.append(decypher_map[space])
 
     return message
-

@@ -1,10 +1,11 @@
-#ui.py
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QTabWidget,
-    QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton,
-    QFileDialog, QMessageBox, QGroupBox
+    QVBoxLayout, QHBoxLayout, QPushButton,
+    QFileDialog, QMessageBox, QGroupBox,
+    QRadioButton, QButtonGroup, QSpinBox, QLabel, QPlainTextEdit
 )
 from utils import check_len
+from constants import Mode
 
 
 class SteganographyApp(QMainWindow):
@@ -12,7 +13,6 @@ class SteganographyApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("Стенография")
         self.setGeometry(200, 100, 1000, 700)
-
         self.init_ui()
         self.apply_styles()
 
@@ -20,8 +20,37 @@ class SteganographyApp(QMainWindow):
         self.tabs = QTabWidget()
         self.tabs.addTab(self.create_encrypt_tab(), "Шифрование")
         self.tabs.addTab(self.create_decrypt_tab(), "Дешифрование")
-
         self.setCentralWidget(self.tabs)
+
+    def create_mode_group(self, for_encrypt=True):
+        group = QGroupBox("Режим" if for_encrypt else "Режим дешифрования")
+        layout = QVBoxLayout()
+
+        rb_simple = QRadioButton("Обыкновенные пробелы")
+        rb_nbsp = QRadioButton("Обычный и неразрывный пробелы")
+        rb_simple.setChecked(True)
+
+        buttons = QButtonGroup(self)
+        buttons.addButton(rb_simple)
+        buttons.addButton(rb_nbsp)
+
+        spin = QSpinBox()
+        spin.setRange(1, 10000)
+        spin.setValue(1)
+        spin.setEnabled(False)
+
+        rb_nbsp.toggled.connect(spin.setEnabled)
+
+        line_layout = QHBoxLayout()
+        line_layout.addWidget(QLabel("Количество шифруемых символов на строку:"))
+        line_layout.addWidget(spin)
+
+        layout.addWidget(rb_simple)
+        layout.addWidget(rb_nbsp)
+        layout.addLayout(line_layout)
+        group.setLayout(layout)
+
+        return group, rb_simple, rb_nbsp, spin
 
     def create_encrypt_tab(self):
         tab = QWidget()
@@ -29,57 +58,46 @@ class SteganographyApp(QMainWindow):
 
         container_group = QGroupBox("Контейнер (текст-носитель)")
         container_layout = QVBoxLayout()
-
-        self.container_text = QTextEdit()
-        self.container_text.setPlaceholderText("Введите текст контейнера или загрузите из файла...")
+        self.container_text = QPlainTextEdit()
         container_layout.addWidget(self.container_text)
-
-        container_btn = QPushButton("Загрузить контейнер из файла")
-        container_btn.clicked.connect(self.load_container_file)
-        container_layout.addWidget(container_btn)
-
+        btn = QPushButton("Загрузить контейнер из файла")
+        btn.clicked.connect(self.load_container_file)
+        container_layout.addWidget(btn)
         container_group.setLayout(container_layout)
 
         message_group = QGroupBox("Секретное сообщение")
         message_layout = QVBoxLayout()
-
-        self.secret_text = QTextEdit()
-        self.secret_text.setPlaceholderText("Введите секретное сообщение...")
+        self.secret_text = QPlainTextEdit()
         message_layout.addWidget(self.secret_text)
-
-        message_btn = QPushButton("Загрузить сообщение из файла")
-        message_btn.clicked.connect(self.load_secret_file)
-        message_layout.addWidget(message_btn)
-
+        btn = QPushButton("Загрузить сообщение из файла")
+        btn.clicked.connect(self.load_secret_file)
+        message_layout.addWidget(btn)
         message_group.setLayout(message_layout)
 
-        buttons_layout = QHBoxLayout()
+        self.enc_mode_group, self.enc_simple_rb, self.enc_nbsp_rb, self.enc_spin = self.create_mode_group(True)
 
+        buttons_layout = QHBoxLayout()
         check_btn = QPushButton("Проверить длину")
         check_btn.clicked.connect(self.check_length)
-
         encrypt_btn = QPushButton("Зашифровать")
         encrypt_btn.clicked.connect(self.encrypt)
-
         save_btn = QPushButton("Сохранить в файл")
         save_btn.clicked.connect(self.save_encrypted_file)
         save_btn.setObjectName("saveButton")
-
         buttons_layout.addWidget(check_btn)
         buttons_layout.addWidget(encrypt_btn)
         buttons_layout.addWidget(save_btn)
 
         result_group = QGroupBox("Зашифрованный текст")
         result_layout = QVBoxLayout()
-
-        self.encrypted_text = QTextEdit()
+        self.encrypted_text = QPlainTextEdit()
         self.encrypted_text.setReadOnly(True)
         result_layout.addWidget(self.encrypted_text)
-
         result_group.setLayout(result_layout)
 
         layout.addWidget(container_group)
         layout.addWidget(message_group)
+        layout.addWidget(self.enc_mode_group)
         layout.addLayout(buttons_layout)
         layout.addWidget(result_group)
 
@@ -91,170 +109,111 @@ class SteganographyApp(QMainWindow):
 
         input_group = QGroupBox("Зашифрованный текст")
         input_layout = QVBoxLayout()
-
-        self.encrypted_input = QTextEdit()
-        self.encrypted_input.setPlaceholderText("Вставьте зашифрованный текст...")
+        self.encrypted_input = QPlainTextEdit()
         input_layout.addWidget(self.encrypted_input)
-
-        load_btn = QPushButton("Загрузить зашифрованный текст из файла")
-        load_btn.clicked.connect(self.load_encrypted_file)
-        input_layout.addWidget(load_btn)
-
+        btn = QPushButton("Загрузить зашифрованный текст из файла")
+        btn.clicked.connect(self.load_encrypted_file)
+        input_layout.addWidget(btn)
         input_group.setLayout(input_layout)
 
+        self.dec_mode_group, self.dec_simple_rb, self.dec_nbsp_rb, self.dec_spin = self.create_mode_group(False)
+
         decrypt_btn = QPushButton("Расшифровать")
-        decrypt_btn.clicked.connect(self.decrypt_stub)
+        decrypt_btn.clicked.connect(self.decrypt)
 
         output_group = QGroupBox("Расшифрованное сообщение")
         output_layout = QVBoxLayout()
-
-        self.decrypted_text = QTextEdit()
+        self.decrypted_text = QPlainTextEdit()
         self.decrypted_text.setReadOnly(True)
         output_layout.addWidget(self.decrypted_text)
-
         output_group.setLayout(output_layout)
 
         layout.addWidget(input_group)
+        layout.addWidget(self.dec_mode_group)
         layout.addWidget(decrypt_btn)
         layout.addWidget(output_group)
 
         return tab
 
     def load_container_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Выбор файла")
-        if file_path:
-            with open(file_path, "r", encoding="utf-8") as f:
-                self.container_text.setText(f.read())
-
-    def load_encrypted_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Выбор зашифрованного файла",
-            "",
-            "Текстовые файлы (*.txt);;Все файлы (*)"
-        )
-
-        if file_path:
-            with open(file_path, "r", encoding="utf-8") as f:
-                self.encrypted_input.setText(f.read())
+        path, _ = QFileDialog.getOpenFileName(self, "Выбор файла")
+        if path:
+            with open(path, "r", encoding="utf-8") as f:
+                self.container_text.setPlainText(f.read())
 
     def load_secret_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Выбор файла")
-        if file_path:
-            with open(file_path, "r", encoding="utf-8") as f:
-                self.secret_text.setText(f.read())
+        path, _ = QFileDialog.getOpenFileName(self, "Выбор файла")
+        if path:
+            with open(path, "r", encoding="utf-8") as f:
+                self.secret_text.setPlainText(f.read())
+
+    def load_encrypted_file(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Выбор файла", "", "Текстовые файлы (*.txt)")
+        if path:
+            with open(path, "r", encoding="utf-8") as f:
+                self.encrypted_input.setPlainText(f.read())
 
     def check_length(self):
-        from utils import check_len
-
-        container = self.container_text.toPlainText()
-        secret = self.secret_text.toPlainText()
-
-        try:
-            result = check_len(container, secret)
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", str(e))
-            return
-
-        verdict = "Сообщение поместится" if result.fits else "Сообщение не поместится"
-
+        result = check_len(
+            self.container_text.toPlainText(),
+            self.secret_text.toPlainText()
+        )
         QMessageBox.information(
             self,
             "Проверка длины",
             f"Размер контейнера: {result.container_capacity}\n"
             f"Текущая длина сообщения: {result.message_length}\n\n"
-            f"{verdict}"
+            f"{'Сообщение поместится' if result.fits else 'Сообщение не поместится'}"
         )
 
     def encrypt(self):
-        from utils import text_to_bits, trim_spaces, put_end_marker
+        from utils import text_to_bits, trim_spaces
         from cypher import cypher
 
-        result_str = None
+        container = self.container_text.toPlainText()
+        secret = self.secret_text.toPlainText()
+        bits = text_to_bits(secret)
 
-        try:
-            container = self.container_text.toPlainText()
-            secret = self.secret_text.toPlainText()
-
-            secret_bits = text_to_bits(secret)
-            secret_len = len(secret_bits)
-
-            result = check_len(container, secret)
-
-            if not result.fits:
-                raise ValueError("Текущее сообщение не поместится в контейнер.")
-
-            trimmed = trim_spaces(container)
-            trimmed_with_end = put_end_marker(secret_len, trimmed)
-            result = cypher(trimmed_with_end, secret_bits)
-            result_str = ''.join(result)
-        except ValueError as e:
-            QMessageBox.warning(self, "Ошибка", str(e))
-            return
-        except Exception:
-            QMessageBox.critical(self, "Ошибка", "Внутренняя ошибка приложения")
+        check = check_len(container, secret)
+        if not check.fits:
+            self.encrypted_text.setPlainText("Сообщение не помещается в контейнер")
             return
 
-        if result_str is not None:
-            self.encrypted_text.setText(result_str)
+        mode = Mode.REGULAR_SPACES if self.enc_simple_rb.isChecked() else Mode.NON_BREAKING_SPACES
+        per_line = 1 if mode == Mode.REGULAR_SPACES else self.enc_spin.value()
 
-    def save_encrypted_file(self):
-        encrypted_text = self.encrypted_text.toPlainText()
+        trimmed = trim_spaces(container)
+        result = cypher(trimmed, bits, mode=mode, number_of_bits=per_line)
+        self.encrypted_text.setPlainText("".join(result))
 
-        if not encrypted_text.strip():
-            QMessageBox.warning(
-                self,
-                "Ошибка сохранения",
-                "Зашифрованный текст пуст. Сначала выполните шифрование."
-            )
-            return
-
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Сохранить зашифрованный текст",
-            "",
-            "Текстовые файлы (*.txt);;Все файлы (*)"
-        )
-
-        if file_path:
-            if not file_path.endswith(".txt"):
-                file_path += ".txt"
-
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(encrypted_text)
-
-            QMessageBox.information(
-                self,
-                "Сохранено",
-                "Зашифрованный текст успешно сохранён."
-            )
-
-    def decrypt_stub(self):
+    def decrypt(self):
         from utils import extract_spaces, bits_to_text
         from cypher import decypher
 
-        result_str = None
+        mode = Mode.REGULAR_SPACES if self.dec_simple_rb.isChecked() else Mode.NON_BREAKING_SPACES
+        per_line = 1 if mode == Mode.REGULAR_SPACES else self.dec_spin.value()
 
-        try:
-            encrypted_text = self.encrypted_input.toPlainText()
-            spaces = extract_spaces(encrypted_text)
-            bits = decypher(spaces)
-            decrypted_text = bits_to_text(bits)
-            result_str = decrypted_text
-        except ValueError as e:
-            QMessageBox.warning(self, "Ошибка", str(e))
-            return
-        except Exception:
-            QMessageBox.critical(self, "Ошибка", "Внутренняя ошибка приложения")
+        encrypted = self.encrypted_input.toPlainText()
+        spaces = extract_spaces(encrypted)
+        bits = decypher(spaces, mode=mode, number_of_bits=per_line)
+        self.decrypted_text.setPlainText(bits_to_text(bits))
+
+    def save_encrypted_file(self):
+        text = self.encrypted_text.toPlainText()
+        if not text.strip():
+            QMessageBox.warning(self, "Ошибка", "Нет данных для сохранения")
             return
 
-        self.decrypted_text.setText(result_str)
+        path, _ = QFileDialog.getSaveFileName(self, "Сохранить", "", "Текстовые файлы (*.txt)")
+        if path:
+            if not path.endswith(".txt"):
+                path += ".txt"
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
 
     def apply_styles(self):
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f5f7fa;
-            }
+            QMainWindow { background-color: #f5f7fa; }
             QGroupBox {
                 font-weight: bold;
                 border: 1px solid #dcdcdc;
@@ -263,7 +222,7 @@ class SteganographyApp(QMainWindow):
                 padding: 10px;
                 background-color: #ffffff;
             }
-            QTextEdit {
+            QPlainTextEdit {
                 border: 1px solid #cccccc;
                 border-radius: 6px;
                 padding: 8px;
@@ -276,28 +235,6 @@ class SteganographyApp(QMainWindow):
                 padding: 8px 14px;
                 font-size: 14px;
             }
-            QPushButton:hover {
-                background-color: #357ab8;
-            }
-            QTabWidget::pane {
-                border: none;
-            }
-            QTabBar::tab {
-                background: #e6e9ef;
-                padding: 5px 5px;
-                border-top-left-radius: 8px;
-                border-top-right-radius: 8px;
-                margin-right: 2px;
-                min-width: 120px; 
-            }
-            QTabBar::tab:selected {
-                background: #ffffff;
-                font-weight: bold;
-                min-width: 120px;
-            }
-            QPushButton#saveButton {
-                background-color: #2ecc71;
-            }
+            QPushButton:hover { background-color: #357ab8; }
+            QPushButton#saveButton { background-color: #2ecc71; }
         """)
-
-
