@@ -9,6 +9,7 @@ class Mode(Enum):
 
 
 end_of_line_symbol = '\n'
+space_symbols = (" ", "\u00A0")
 
 cypher_maps:Dict[Mode, Dict[int, str]] = dict([(Mode.REGULAR_SPACES,        dict([(1, " "), (0, "  ")])),
                                                (Mode.NON_BREAKING_SPACES,   dict([(1, " "), (0, "\u00A0")]))])

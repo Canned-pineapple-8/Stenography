@@ -50,13 +50,15 @@ def decypher(spaces: List[str], number_of_bits: int = 1, mode:Mode = Mode.REGULA
 
     message: List[int] = []
     for space_sequence in spaces:
+
         if mode is Mode.REGULAR_SPACES:
             if space_sequence not in decypher_map.keys():  # прекращаем обработку, если встретили неизвестный символ
                 raise ValueError(f"Некорректный символ: {space_sequence}")
             message.append(decypher_map[space_sequence])
+
         elif mode is Mode.NON_BREAKING_SPACES:
-            if len(space_sequence) != number_of_bits:
-                raise ValueError("Указанное количество шифруемых символов на строку не совпадает с фактическим.")
+#            if len(space_sequence) != number_of_bits:
+#                raise ValueError("Указанное количество шифруемых символов на строку не совпадает с фактическим.")
             for space in space_sequence:
                 if space not in decypher_map.keys():  # прекращаем обработку, если встретили неизвестный символ
                     raise ValueError(f"Некорректный символ: {space}")

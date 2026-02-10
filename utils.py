@@ -1,6 +1,6 @@
 # utils.py
 from typing import List, Tuple, NamedTuple
-from constants import end_of_line_symbol
+from constants import end_of_line_symbol, space_symbols
 
 
 def trim_spaces(text: str, markers: Tuple[str, ...] = end_of_line_symbol) -> List[str]:
@@ -22,17 +22,17 @@ def trim_spaces(text: str, markers: Tuple[str, ...] = end_of_line_symbol) -> Lis
             current.pop()
             next_symbol = i
             i -= 1
-            while i < len(text) and text[i].isspace():
+            while current and i < len(text) and text[i].isspace():
                 current.pop()
                 i -= 1
-            sentences.append(''.join(current[::-1]))
+            sentences.append(''.join(current))
             current = []
             i = next_symbol
 
         i += 1
 
     if current:
-        sentences.append(''.join(current[::-1]))
+        sentences.append(''.join(current))
 
     return sentences
 
@@ -50,7 +50,7 @@ def extract_spaces(text: str, markers: Tuple[str, ...] = end_of_line_symbol) -> 
             buf = []
             next_symbol = i + 1
             i -= 1
-            while i >= 0 and text[i].isspace():
+            while i >= 0 and text[i] in space_symbols:
                 buf.append(text[i])
                 i -= 1
             i = next_symbol

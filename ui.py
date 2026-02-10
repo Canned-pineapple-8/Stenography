@@ -171,16 +171,19 @@ class SteganographyApp(QMainWindow):
         return self.encrypted_file_content if self.encrypted_file_content is not None else self.encrypted_input.toPlainText()
 
     def check_length(self):
-        container = self.get_container_text()
-        secret = self.get_secret_text()
-        result = check_len(container, secret)
-        QMessageBox.information(
-            self,
-            "Проверка длины",
-            f"Размер контейнера: {result.container_capacity}\n"
-            f"Длина сообщения: {result.message_length}\n\n"
-            f"{'Сообщение поместится' if result.fits else 'Сообщение не поместится'}"
-        )
+        try:
+            container = self.get_container_text()
+            secret = self.get_secret_text()
+            result = check_len(container, secret)
+            QMessageBox.information(
+                self,
+                "Проверка длины",
+                f"Размер контейнера: {result.container_capacity}\n"
+                f"Длина сообщения: {result.message_length}\n\n"
+                f"{'Сообщение поместится' if result.fits else 'Сообщение не поместится'}"
+            )
+        except Exception as e:
+            QMessageBox.information(self, "Произошла ошибка при подсчёте длины")
 
     def encrypt(self):
         from utils import text_to_bits, trim_spaces
