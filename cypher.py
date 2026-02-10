@@ -6,7 +6,7 @@ from constants import cypher_maps, decypher_maps, end_of_line_symbol, Mode
 def cypher(split_container:List[str], message: List[int], number_of_bits: int = 1,
            eol_symbol:str = None, mode:Mode = Mode.REGULAR_SPACES) -> List[str]:
     """
-    Шифрует текст посредством вставки одиночных/двойных пробелов
+    Шифрует текст посредством вставки пробелов
     """
     if mode is Mode.REGULAR_SPACES and number_of_bits > 1:
         raise ValueError("Метод обыкновенных пробелов поддерживает только один шифруемый символ на предложение.")
@@ -55,6 +55,8 @@ def decypher(spaces: List[str], number_of_bits: int = 1, mode:Mode = Mode.REGULA
                 raise ValueError(f"Некорректный символ: {space_sequence}")
             message.append(decypher_map[space_sequence])
         elif mode is Mode.NON_BREAKING_SPACES:
+            if len(space_sequence) != number_of_bits:
+                raise ValueError("Указанное количество шифруемых символов на строку не совпадает с фактическим.")
             for space in space_sequence:
                 if space not in decypher_map.keys():  # прекращаем обработку, если встретили неизвестный символ
                     raise ValueError(f"Некорректный символ: {space}")

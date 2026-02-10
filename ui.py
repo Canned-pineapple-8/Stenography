@@ -13,6 +13,12 @@ class SteganographyApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("Стенография")
         self.setGeometry(200, 100, 1000, 700)
+
+        # Содержимое файлов
+        self.container_file_content = None
+        self.secret_file_content = None
+        self.encrypted_file_content = None
+
         self.init_ui()
         self.apply_styles()
 
@@ -38,7 +44,6 @@ class SteganographyApp(QMainWindow):
         spin.setRange(1, 10000)
         spin.setValue(1)
         spin.setEnabled(False)
-
         rb_nbsp.toggled.connect(spin.setEnabled)
 
         line_layout = QHBoxLayout()
@@ -60,18 +65,18 @@ class SteganographyApp(QMainWindow):
         container_layout = QVBoxLayout()
         self.container_text = QPlainTextEdit()
         container_layout.addWidget(self.container_text)
-        btn = QPushButton("Загрузить контейнер из файла")
-        btn.clicked.connect(self.load_container_file)
-        container_layout.addWidget(btn)
+        btn_load_container = QPushButton("Загрузить контейнер из файла")
+        btn_load_container.clicked.connect(self.load_container_file)
+        container_layout.addWidget(btn_load_container)
         container_group.setLayout(container_layout)
 
         message_group = QGroupBox("Секретное сообщение")
         message_layout = QVBoxLayout()
         self.secret_text = QPlainTextEdit()
         message_layout.addWidget(self.secret_text)
-        btn = QPushButton("Загрузить сообщение из файла")
-        btn.clicked.connect(self.load_secret_file)
-        message_layout.addWidget(btn)
+        btn_load_secret = QPushButton("Загрузить сообщение из файла")
+        btn_load_secret.clicked.connect(self.load_secret_file)
+        message_layout.addWidget(btn_load_secret)
         message_group.setLayout(message_layout)
 
         self.enc_mode_group, self.enc_simple_rb, self.enc_nbsp_rb, self.enc_spin = self.create_mode_group(True)
@@ -111,9 +116,9 @@ class SteganographyApp(QMainWindow):
         input_layout = QVBoxLayout()
         self.encrypted_input = QPlainTextEdit()
         input_layout.addWidget(self.encrypted_input)
-        btn = QPushButton("Загрузить зашифрованный текст из файла")
-        btn.clicked.connect(self.load_encrypted_file)
-        input_layout.addWidget(btn)
+        btn_load_encrypted = QPushButton("Загрузить зашифрованный файл")
+        btn_load_encrypted.clicked.connect(self.load_encrypted_file)
+        input_layout.addWidget(btn_load_encrypted)
         input_group.setLayout(input_layout)
 
         self.dec_mode_group, self.dec_simple_rb, self.dec_nbsp_rb, self.dec_spin = self.create_mode_group(False)
@@ -136,33 +141,44 @@ class SteganographyApp(QMainWindow):
         return tab
 
     def load_container_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Выбор файла")
+        path, _ = QFileDialog.getOpenFileName(self, "Выбор файла контейнера")
         if path:
             with open(path, "r", encoding="utf-8") as f:
-                self.container_text.setPlainText(f.read())
+                self.container_file_content = f.read()
+                self.container_text.setPlainText(self.container_file_content)
 
     def load_secret_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Выбор файла")
+        path, _ = QFileDialog.getOpenFileName(self, "Выбор файла сообщения")
         if path:
             with open(path, "r", encoding="utf-8") as f:
-                self.secret_text.setPlainText(f.read())
+                self.secret_file_content = f.read()
+                self.secret_text.setPlainText(self.secret_file_content)
 
     def load_encrypted_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Выбор файла", "", "Текстовые файлы (*.txt)")
+        path, _ = QFileDialog.getOpenFileName(self, "Выбор зашифрованного файла", "", "Текстовые файлы (*.txt)")
         if path:
             with open(path, "r", encoding="utf-8") as f:
-                self.encrypted_input.setPlainText(f.read())
+                self.encrypted_file_content = f.read()
+                self.encrypted_input.setPlainText(self.encrypted_file_content)
+
+    def get_container_text(self):
+        return self.container_file_content if self.container_file_content is not None else self.container_text.toPlainText()
+
+    def get_secret_text(self):
+        return self.secret_file_content if self.secret_file_content is not None else self.secret_text.toPlainText()
+
+    def get_encrypted_text(self):
+        return self.encrypted_file_content if self.encrypted_file_content is not None else self.encrypted_input.toPlainText()
 
     def check_length(self):
-        result = check_len(
-            self.container_text.toPlainText(),
-            self.secret_text.toPlainText()
-        )
+        container = self.get_container_text()
+        secret = self.get_secret_text()
+        result = check_len(container, secret)
         QMessageBox.information(
             self,
             "Проверка длины",
             f"Размер контейнера: {result.container_capacity}\n"
-            f"Текущая длина сообщения: {result.message_length}\n\n"
+            f"Длина сообщения: {result.message_length}\n\n"
             f"{'Сообщение поместится' if result.fits else 'Сообщение не поместится'}"
         )
 
@@ -170,41 +186,51 @@ class SteganographyApp(QMainWindow):
         from utils import text_to_bits, trim_spaces
         from cypher import cypher
 
-        container = self.container_text.toPlainText()
-        secret = self.secret_text.toPlainText()
-        bits = text_to_bits(secret)
+        try:
+            container = self.get_container_text()
+            secret = self.get_secret_text()
+            bits = text_to_bits(secret)
 
-        check = check_len(container, secret)
-        if not check.fits:
-            self.encrypted_text.setPlainText("Сообщение не помещается в контейнер")
-            return
+            check = check_len(container, secret)
+            if not check.fits:
+                raise ValueError("Сообщение не помещается в контейнер")
 
-        mode = Mode.REGULAR_SPACES if self.enc_simple_rb.isChecked() else Mode.NON_BREAKING_SPACES
-        per_line = 1 if mode == Mode.REGULAR_SPACES else self.enc_spin.value()
+            mode = Mode.REGULAR_SPACES if self.enc_simple_rb.isChecked() else Mode.NON_BREAKING_SPACES
+            per_line = 1 if mode == Mode.REGULAR_SPACES else self.enc_spin.value()
 
-        trimmed = trim_spaces(container)
-        result = cypher(trimmed, bits, mode=mode, number_of_bits=per_line)
-        self.encrypted_text.setPlainText("".join(result))
+            trimmed = trim_spaces(container)
+            result = cypher(trimmed, bits, mode=mode, number_of_bits=per_line)
+            self.raw_encrypted_text = "".join(result)
+            self.encrypted_text.setPlainText("".join(result))
+        except ValueError as e:
+            self.encrypted_text.setPlainText(str(e))
+        except Exception:
+            self.encrypted_text.setPlainText("Внутренняя ошибка приложения")
 
     def decrypt(self):
         from utils import extract_spaces, bits_to_text
         from cypher import decypher
 
-        mode = Mode.REGULAR_SPACES if self.dec_simple_rb.isChecked() else Mode.NON_BREAKING_SPACES
-        per_line = 1 if mode == Mode.REGULAR_SPACES else self.dec_spin.value()
+        try:
+            encrypted = self.get_encrypted_text()
+            mode = Mode.REGULAR_SPACES if self.dec_simple_rb.isChecked() else Mode.NON_BREAKING_SPACES
+            per_line = 1 if mode == Mode.REGULAR_SPACES else self.dec_spin.value()
 
-        encrypted = self.encrypted_input.toPlainText()
-        spaces = extract_spaces(encrypted)
-        bits = decypher(spaces, mode=mode, number_of_bits=per_line)
-        self.decrypted_text.setPlainText(bits_to_text(bits))
+            spaces = extract_spaces(encrypted)
+            bits = decypher(spaces, mode=mode, number_of_bits=per_line)
+            self.decrypted_text.setPlainText(bits_to_text(bits))
+        except ValueError as e:
+            self.decrypted_text.setPlainText(str(e))
+        except Exception:
+            self.decrypted_text.setPlainText("Внутренняя ошибка приложения")
 
     def save_encrypted_file(self):
-        text = self.encrypted_text.toPlainText()
+        text = self.raw_encrypted_text
         if not text.strip():
             QMessageBox.warning(self, "Ошибка", "Нет данных для сохранения")
             return
 
-        path, _ = QFileDialog.getSaveFileName(self, "Сохранить", "", "Текстовые файлы (*.txt)")
+        path, _ = QFileDialog.getSaveFileName(self, "Сохранить файл", "", "Текстовые файлы (*.txt)")
         if path:
             if not path.endswith(".txt"):
                 path += ".txt"

@@ -25,14 +25,14 @@ def trim_spaces(text: str, markers: Tuple[str, ...] = end_of_line_symbol) -> Lis
             while i < len(text) and text[i].isspace():
                 current.pop()
                 i -= 1
-            sentences.append(''.join(current))
+            sentences.append(''.join(current[::-1]))
             current = []
             i = next_symbol
 
         i += 1
 
     if current:
-        sentences.append(''.join(current))
+        sentences.append(''.join(current[::-1]))
 
     return sentences
 
@@ -56,7 +56,7 @@ def extract_spaces(text: str, markers: Tuple[str, ...] = end_of_line_symbol) -> 
             i = next_symbol
 
             if buf:
-                spaces.append(''.join(buf))
+                spaces.append(''.join(buf[::-1]))
         else:
             i += 1
 

@@ -23,4 +23,11 @@ if __name__ == "__main__":
     window.show()
     sys.exit(app.exec_())
 
-
+    #path = "cypher1.txt"
+    #with open(path, "r", encoding="utf-8") as f:
+    #    text = f.read()
+    #if "\u00A0" in text:
+    #    print("Есть неразрывные пробелы")
+    #else:
+    #    print("Неразрывных пробелов нет")
+    #print(text)
